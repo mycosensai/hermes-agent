@@ -40,6 +40,9 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: android-actions/setup-android@v3
+        with:
+          # The action's default list includes the removed "tools" package.
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0"
       # Chaquopy compiles the bundled Python with the same minor version (3.13).
       - uses: actions/setup-python@v5
         with:
@@ -88,6 +91,8 @@ jobs:
           java-version: "17"
       - if: steps.secrets.outputs.present == 'true'
         uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0"
       - if: steps.secrets.outputs.present == 'true'
         uses: actions/setup-python@v5
         with:
