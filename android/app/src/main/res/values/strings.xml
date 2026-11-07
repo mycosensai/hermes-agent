@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Hermes</string>
+    <string name="sign_in_title">Connect to Nous Research</string>
+    <string name="api_key_hint">Nous API key</string>
+    <string name="save_api_key">Save API key</string>
+    <string name="clear_api_key">Clear key</string>
+    <string name="refresh_models">Refresh models</string>
+    <string name="sign_in_button">Or start device sign-in</string>
+    <string name="open_url">Open verification URL</string>
+    <string name="poll_status">Waiting for approval…</string>
+    <string name="signed_in">Signed in to Nous</string>
+    <string name="send">Send</string>
+    <string name="hint_message">Message Hermes…</string>
+    <string name="status_idle">Not signed in · connect to Nous to begin</string>
+    <string name="model_label">Model</string>
+    <string name="emblem_description">Winged staff of Hermes</string>
+    <string name="hero_name">HERMES</string>
+    <string name="hero_subtitle">Messenger of the gods</string>
+    <string name="sanctuary_title">Enter the sanctuary</string>
+    <string name="sanctuary_description">Connect your Nous account. Your approval stays in your browser; your conversation stays here.</string>
+    <string name="portal_sign_in">Sign in with Nous Portal</string>
+    <string name="portal_approval">Open Nous approval page</string>
+    <string name="api_key_alternative">— or use an API key —</string>
+    <string name="remove_saved_key">Remove saved API key</string>
+    <string name="sanctuary_motto">WISDOM  ·  CURIOSITY  ·  DISCOVERY</string>
+    <string name="chat_welcome">Ask, and let wisdom take flight.\n</string>
+    <string name="send_to_hermes">Send to Hermes</string>
+</resources>

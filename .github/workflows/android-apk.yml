@@ -1,0 +1,122 @@
+name: Android APK
+
+on:
+  push:
+    branches: [main, android-apk]
+    tags: ["v*"]
+    paths:
+      - "android/**"
+      - "agent/**"
+      - "tools/**"
+      - "hermes_cli/**"
+      - "*.py"
+      - "pyproject.toml"
+      - ".github/workflows/android-apk.yml"
+  pull_request:
+    paths:
+      - "android/**"
+      - ".github/workflows/android-apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  debug:
+    name: Build debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+        with:
+          # The action's default list includes the removed "tools" package.
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0"
+      # Chaquopy compiles the bundled Python with the same minor version (3.13).
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build and unit test
+        run: ./gradlew --no-daemon assembleDebug testDebugUnitTest
+      - name: Offline APK Python smoke test
+        run: python3.13 -S scripts/verify_apk_startup.py app/build/outputs/apk/debug/app-debug.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hermes-android-debug
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+  release:
+    name: Build signed release APK
+    needs: debug
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: android
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+    steps:
+      - name: Check signing secrets
+        id: secrets
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$ANDROID_KEYSTORE_PASSWORD" ] && [ -n "$ANDROID_KEY_ALIAS" ] && [ -n "$ANDROID_KEY_PASSWORD" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Signing secrets not configured; skipping release APK."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.secrets.outputs.present == 'true'
+        uses: actions/checkout@v4
+      - if: steps.secrets.outputs.present == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - if: steps.secrets.outputs.present == 'true'
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0"
+      - if: steps.secrets.outputs.present == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - if: steps.secrets.outputs.present == 'true'
+        uses: gradle/actions/setup-gradle@v4
+      - name: Build unsigned release
+        if: steps.secrets.outputs.present == 'true'
+        run: ./gradlew --no-daemon assembleRelease
+      - name: Sign release APK
+        if: steps.secrets.outputs.present == 'true'
+        run: |
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          "$BT/zipalign" -f -p 4 app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/aligned.apk"
+          "$BT/apksigner" sign --ks "$RUNNER_TEMP/release.jks" \
+            --ks-pass env:ANDROID_KEYSTORE_PASSWORD --ks-key-alias "$ANDROID_KEY_ALIAS" \
+            --key-pass env:ANDROID_KEY_PASSWORD --out app/build/outputs/apk/release/hermes-release.apk \
+            "$RUNNER_TEMP/aligned.apk"
+          "$BT/apksigner" verify app/build/outputs/apk/release/hermes-release.apk
+          rm -f "$RUNNER_TEMP/release.jks"
+      - if: steps.secrets.outputs.present == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: hermes-android-release
+          path: android/app/build/outputs/apk/release/hermes-release.apk
+          if-no-files-found: error

@@ -1,0 +1,6 @@
+<resources>
+    <color name="obsidian">#09090B</color><color name="obsidian_surface">#171719</color>
+    <color name="gold">#D4AF37</color><color name="gold_light">#F2DB94</color>
+    <color name="gold_muted">#B7A374</color><color name="gold_border">#78622E</color>
+    <color name="ic_launcher_background">#09090B</color>
+</resources>
